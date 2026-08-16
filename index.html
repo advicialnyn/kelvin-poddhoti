@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>কেলভিন পদ্ধতি — গ্যালভানোমিটার রোধ নির্ণয়</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Bengali:wght@400;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#15110d;
+    --panel:#1f1811;
+    --panel-2:#241c14;
+    --wood:#2a2015;
+    --brass:#b8863b;
+    --brass-light:#e0b563;
+    --brass-dim:#6b4f28;
+    --copper:#c1440e;
+    --verdigris:#5f9484;
+    --parchment:#ede3d0;
+    --muted:#a89a82;
+    --line: rgba(184,134,59,0.28);
+    --danger:#c1440e;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 700px at 15% -10%, #241a10 0%, transparent 60%),
+      radial-gradient(1000px 600px at 110% 10%, #1c1510 0%, transparent 55%),
+      var(--bg);
+    color:var(--parchment);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding-bottom:60px;
+  }
+  .bn{font-family:'Noto Serif Bengali', serif;}
+  .wrap{max-width:920px;margin:0 auto;padding:28px 16px 0;}
+
+  header{
+    text-align:center;
+    padding:18px 10px 26px;
+    border-bottom:1px solid var(--line);
+    margin-bottom:26px;
+  }
+  .eyebrow{
+    font-family:'JetBrains Mono',monospace;
+    letter-spacing:.18em;
+    font-size:11px;
+    color:var(--brass-light);
+    text-transform:uppercase;
+    opacity:.85;
+  }
+  h1{
+    font-family:'Noto Serif Bengali','Playfair Display',serif;
+    font-weight:700;
+    font-size:clamp(22px,5vw,32px);
+    margin:8px 0 6px;
+    color:var(--parchment);
+    line-height:1.25;
+  }
+  .subtitle{
+    font-family:'Playfair Display',serif;
+    font-style:italic;
+    font-size:14px;
+    color:var(--muted);
+  }
+
+  section{margin-bottom:26px;}
+  .card{
+    background:linear-gradient(180deg,var(--panel),var(--panel-2));
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:18px;
+    box-shadow: 0 10px 30px -18px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.02);
+  }
+  .card + .card{margin-top:16px;}
+  .card h2{
+    font-family:'Noto Serif Bengali',serif;
+    font-size:16px;
+    margin:0 0 4px;
+    color:var(--brass-light);
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .card h2 .num{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    color:var(--wood);
+    background:var(--brass);
+    border-radius:3px;
+    padding:1px 6px;
+  }
+  .hint{font-size:12.5px;color:var(--muted);margin:2px 0 14px;line-height:1.55;}
+
+  /* ---- circuit diagram ---- */
+  .diagram-box{
+    background:radial-gradient(ellipse at center, #221a12 0%, #170f0a 100%);
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:10px;
+    margin-bottom:14px;
+  }
+  svg{display:block;width:100%;height:auto;}
+  .wire{stroke:var(--brass); stroke-width:2; fill:none;}
+  .node-label{font-family:'JetBrains Mono',monospace;font-size:13px;fill:var(--brass-light);}
+  .arm-label{font-family:'JetBrains Mono',monospace;font-size:12px;fill:var(--parchment);}
+  .needle{transform-origin:150px 150px; transition:transform .35s cubic-bezier(.2,.9,.3,1.2);}
+
+  /* ---- controls ---- */
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+  .btn{
+    font-family:'JetBrains Mono',monospace;
+    font-size:13px;
+    padding:9px 14px;
+    border-radius:4px;
+    border:1px solid var(--brass-dim);
+    background:var(--wood);
+    color:var(--parchment);
+    cursor:pointer;
+    transition:all .15s;
+  }
+  .btn:hover{border-color:var(--brass);}
+  .btn.active{
+    background:var(--brass);
+    color:#1c1409;
+    border-color:var(--brass-light);
+    font-weight:700;
+  }
+  .btn.primary{background:var(--copper);border-color:#8f3208;color:#fff;font-weight:600;}
+  .btn.primary:hover{filter:brightness(1.08);}
+  .btn.ghost{background:transparent;}
+  .btn:disabled{opacity:.35;cursor:not-allowed;}
+
+  label.field{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.05em;text-transform:uppercase;}
+  input[type=number]{
+    font-family:'JetBrains Mono',monospace;
+    background:var(--wood);
+    border:1px solid var(--brass-dim);
+    color:var(--parchment);
+    padding:8px 10px;
+    border-radius:4px;
+    width:120px;
+    font-size:14px;
+  }
+  input[type=number]:focus{outline:2px solid var(--brass-light);outline-offset:1px;}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  @media (max-width:560px){ .grid2{grid-template-columns:1fr;} }
+
+  .plugboard{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(56px,1fr));
+    gap:8px;
+    margin-top:10px;
+  }
+  .plug{
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px;
+    text-align:center;
+    padding:10px 4px;
+    border-radius:50%;
+    border:2px solid var(--brass-dim);
+    background:radial-gradient(circle at 35% 30%, #3a2c18, #1a130c);
+    color:var(--muted);
+    cursor:pointer;
+    aspect-ratio:1/1;
+    display:flex;align-items:center;justify-content:center;
+    transition:all .15s;
+  }
+  .plug.pulled{
+    background:radial-gradient(circle at 35% 30%, var(--brass-light), var(--brass));
+    color:#1c1409;
+    border-color:var(--brass-light);
+    font-weight:700;
+    box-shadow:0 0 12px -2px rgba(224,181,99,.6);
+  }
+  .sum-readout{
+    margin-top:10px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:13px;
+    color:var(--brass-light);
+  }
+  .sum-readout b{color:var(--parchment);font-size:16px;}
+
+  .keys{display:flex;gap:14px;flex-wrap:wrap;margin-top:6px;}
+  .key-box{
+    flex:1;
+    min-width:170px;
+    border:1px dashed var(--brass-dim);
+    border-radius:6px;
+    padding:12px;
+    text-align:center;
+  }
+  .key-box .label{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:8px;letter-spacing:.05em;}
+  .status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--brass-dim);margin-right:6px;}
+  .status-dot.on{background:var(--verdigris);box-shadow:0 0 8px var(--verdigris);}
+
+  .deflection-readout{
+    text-align:center;
+    padding:14px;
+    border-radius:6px;
+    background:var(--wood);
+    border:1px solid var(--line);
+    margin-top:10px;
+  }
+  .deflection-readout .digital{
+    font-family:'JetBrains Mono',monospace;
+    font-size:34px;
+    font-weight:700;
+    color:var(--verdigris);
+    text-shadow:0 0 10px rgba(95,148,132,.5);
+    letter-spacing:.02em;
+    margin-bottom:4px;
+  }
+  .deflection-readout .dir{
+    font-family:'Noto Serif Bengali',serif;
+    font-size:20px;
+    color:var(--brass-light);
+    font-weight:700;
+  }
+  .deflection-readout .sub{font-size:12px;color:var(--muted);margin-top:2px;}
+
+  table{width:100%;border-collapse:collapse;margin-top:8px;font-size:12.5px;}
+  th,td{border:1px solid var(--line);padding:7px 8px;text-align:center;font-family:'JetBrains Mono',monospace;}
+  th{background:var(--wood);color:var(--brass-light);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.03em;}
+  td.dirR{color:#e07850;}
+  td.dirL{color:var(--verdigris);}
+  .table-wrap{overflow-x:auto;}
+  .empty-row td{color:var(--muted);font-style:italic;}
+
+  .calc-result{
+    margin-top:12px;
+    padding:14px;
+    border-radius:6px;
+    background:var(--wood);
+    border:1px solid var(--line);
+  }
+  .calc-result .g-value{font-family:'JetBrains Mono',monospace;font-size:22px;color:var(--brass-light);font-weight:700;}
+  .calc-result .g-error{font-size:12.5px;color:var(--muted);margin-top:4px;}
+  .reveal-line{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--verdigris);margin-top:8px;}
+
+  footer{
+    text-align:center;
+    font-size:11.5px;
+    color:var(--muted);
+    padding:24px 16px 8px;
+    font-family:'JetBrains Mono',monospace;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">পরীক্ষণ&nbsp;৫৪ &nbsp;·&nbsp; EXPERIMENT 54</div>
+    <h1 class="bn">কেলভিনের পদ্ধতিতে চল কুণ্ডলী গ্যালভানোমিটারের রোধ নির্ণয়</h1>
+    <div class="subtitle">Determination of the resistance of a moving-coil galvanometer — Kelvin's method</div>
+  </header>
+
+  <!-- STEP 1: SET THE UNKNOWN -->
+  <section class="card">
+    <h2><span class="num">1</span> <span class="bn">গ্যালভানোমিটার প্রস্তুত করুন</span></h2>
+    <p class="hint">এখানে আপনার গ্যালভানোমিটারের একটি "প্রকৃত" রোধ সেট করুন (বাস্তব পরীক্ষায় এটি অজানা থাকে) — অথবা এলোমেলোভাবে একটি অজানা মান তৈরি করুন এবং নিচের ধাপগুলো দিয়ে সেটি বের করার চেষ্টা করুন।</p>
+    <div class="row">
+      <div>
+        <label class="field">true G (Ω) — hidden</label>
+        <input type="number" id="trueG" step="0.1" min="0.1" placeholder="e.g. 15.6">
+      </div>
+      <button class="btn" id="randomizeBtn">🎲 এলোমেলো মান / Randomize</button>
+      <button class="btn ghost" id="lockBtn">🔒 লক করুন / Lock &amp; Hide</button>
+    </div>
+    <div id="lockedStatus" class="reveal-line" style="display:none;margin-top:12px;">✓ গ্যালভানোমিটার লক করা হয়েছে। এখন এর মান আর দেখা যাবে না, পরীক্ষা করে বের করুন।</div>
+  </section>
+
+  <!-- CIRCUIT DIAGRAM -->
+  <section class="card">
+    <h2><span class="num">2</span> <span class="bn">হুইটস্টোন ব্রীজ বর্তনী</span></h2>
+    <p class="hint">P (AB), Q (BC), R (AD) — তিনটি রোধ বাহু। G (DC) হলো পরীক্ষাধীন গ্যালভানোমিটার, যা সবসময় মূল স্রোতপথে থাকে। K₂ শুধু B–D সংযোগকারী একটি সাধারণ চাবি (মিটার নয়) — এটি চাপলে, ব্রীজ অসাম্য থাকলে G-এর কাঁটায় হঠাৎ "ঝাঁকুনি" (kick) দেখা যায়; সাম্যাবস্থায় কিছুই বদলায় না।</p>
+    <div class="diagram-box">
+      <svg viewBox="0 0 300 320">
+        <!-- diamond bridge: A left, B top, C right, D bottom -->
+        <line class="wire" x1="50" y1="150" x2="150" y2="40" />
+        <line class="wire" x1="150" y1="40" x2="250" y2="150" />
+        <line class="wire" x1="50" y1="150" x2="150" y2="260" />
+        <!-- BD bridge key line -->
+        <line class="wire" x1="150" y1="40" x2="150" y2="150" stroke-dasharray="3 4" opacity="0.6"/>
+        <!-- node labels -->
+        <text class="node-label" x="150" y="30" text-anchor="middle">B</text>
+        <text class="node-label" x="262" y="154" text-anchor="start">C</text>
+        <text class="node-label" x="150" y="278" text-anchor="middle">D</text>
+        <text class="node-label" x="38" y="154" text-anchor="end">A</text>
+        <!-- arm labels -->
+        <text class="arm-label" x="88" y="86" text-anchor="middle">P</text>
+        <text class="arm-label" x="212" y="86" text-anchor="middle">Q</text>
+        <text class="arm-label" x="88" y="217" text-anchor="middle">R</text>
+        <!-- K2 key symbol on B-D -->
+        <g transform="translate(150,105)">
+          <line x1="0" y1="0" x2="0" y2="14" stroke="var(--brass)" stroke-width="2"/>
+          <line x1="0" y1="14" x2="14" y2="4" stroke="var(--brass)" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="14" cy="4" r="2.5" fill="var(--brass)"/>
+          <circle cx="0" cy="14" r="2.5" fill="var(--brass)"/>
+        </g>
+        <text class="arm-label" x="30" y="118" fill="var(--muted)" font-size="10">K₂</text>
+        <!-- D to C arm carrying the galvanometer -->
+        <line class="wire" x1="150" y1="260" x2="176" y2="207" />
+        <circle cx="200" cy="180" r="24" fill="#1a130c" stroke="var(--brass)" stroke-width="2"/>
+        <g class="needle" id="needle" style="transform-origin:200px 180px;">
+          <line x1="200" y1="180" x2="200" y2="162" stroke="var(--copper)" stroke-width="3" stroke-linecap="round"/>
+        </g>
+        <line class="wire" x1="224" y1="153" x2="250" y2="150" />
+        <text class="arm-label" x="200" y="215" text-anchor="middle">G</text>
+        <!-- battery leg A to C via H.R.B and K1 -->
+        <line class="wire" x1="50" y1="150" x2="20" y2="150" />
+        <line class="wire" x1="250" y1="150" x2="280" y2="150" />
+        <path class="wire" d="M20,150 L20,300 L280,300 L280,150" />
+        <text class="arm-label" x="150" y="316" text-anchor="middle" fill="var(--muted)" font-size="10">E · H.R.B · K₁</text>
+      </svg>
+    </div>
+  </section>
+
+  <!-- STEP 2: RATIO ARMS -->
+  <section class="card">
+    <h2><span class="num">3</span> <span class="bn">অনুপাত বাহু নির্বাচন করুন — P ও Q</span></h2>
+    <p class="hint">প্রিসেট বোতাম চাপুন, অথবা সরাসরি বক্সে মান টাইপ করুন।</p>
+    <div class="grid2">
+      <div>
+        <label class="field">P (Ω)</label>
+        <div class="row" id="pButtons"></div>
+        <input type="number" id="pInput" step="1" min="0.1" value="10" style="margin-top:8px;width:100%;">
+      </div>
+      <div>
+        <label class="field">Q (Ω)</label>
+        <div class="row" id="qButtons"></div>
+        <input type="number" id="qInput" step="1" min="0.1" value="10" style="margin-top:8px;width:100%;">
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 3: R PLUG BOARD -->
+  <section class="card">
+    <h2><span class="num">4</span> <span class="bn">তৃতীয় বাহুর রোধ (R) — প্লাগ তুলুন</span></h2>
+    <p class="hint">প্রকৃত পোস্ট অফিস বাক্সের মতো প্লাগ তুলুন — অথবা নিচের বক্সে সরাসরি R-এর মান টাইপ করুন (তখন প্লাগ যোগফল উপেক্ষা করা হবে)।</p>
+    <div class="plugboard" id="plugboard"></div>
+    <div class="row" style="margin-top:12px;align-items:flex-end;">
+      <div>
+        <label class="field">R — সরাসরি মান / direct entry (Ω)</label>
+        <input type="number" id="rInput" step="1" min="0" value="0">
+      </div>
+      <div class="sum-readout" style="margin-top:0;">প্লাগ যোগফল / plug sum = <b id="rSum">0</b> Ω</div>
+    </div>
+  </section>
+
+  <!-- STEP 4: KEYS -->
+  <section class="card">
+    <h2><span class="num">5</span> <span class="bn">ব্যাটারি, রিওস্ট্যাট ও চাবি</span></h2>
+    <p class="hint">নিয়ম: প্রথমে K₁ (ব্যাটারি চাবি) চাপুন, তারপর K₂ (গ্যালভানোমিটার চাবি) দ্রুত ট্যাপ করুন। কখনো K₂ ধরে রাখবেন না।</p>
+    <div class="row">
+      <div>
+        <label class="field">E — ব্যাটারি (V)</label>
+        <input type="number" id="eInput" step="0.1" min="0.1" value="2">
+      </div>
+      <div>
+        <label class="field">R<sub>h</sub> — রিওস্ট্যাট (Ω)</label>
+        <input type="number" id="rhInput" step="1" min="0" value="50">
+      </div>
+    </div>
+    <div class="keys">
+      <div class="key-box">
+        <div class="label"><span class="status-dot" id="k1dot"></span>K₁ · BATTERY KEY</div>
+        <button class="btn" id="k1btn">চাপুন / Press K₁</button>
+      </div>
+      <div class="key-box">
+        <div class="label"><span class="status-dot" id="k2dot"></span>K₂ · GALVANOMETER KEY</div>
+        <button class="btn primary" id="k2btn" disabled>ট্যাপ / Tap K₂</button>
+      </div>
+    </div>
+    <div class="deflection-readout" id="readout">
+      <div class="digital" id="digitalReadout">0.00</div>
+      <div class="dir">—</div>
+      <div class="sub">K₁ চাপুন, তারপর K₂ ট্যাপ করুন</div>
+    </div>
+  </section>
+
+  <!-- READINGS TABLE -->
+  <section class="card">
+    <h2><span class="num">6</span> <span class="bn">পর্যবেক্ষণ ছক</span></h2>
+    <div class="table-wrap">
+    <table id="readingsTable">
+      <thead>
+        <tr><th>#</th><th>P (Ω)</th><th>Q (Ω)</th><th>R (Ω)</th><th class="bn">বিক্ষেপ</th><th class="bn">মান (div)</th></tr>
+      </thead>
+      <tbody id="readingsBody">
+        <tr class="empty-row"><td colspan="6">এখনো কোনো পাঠ নেওয়া হয়নি</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <div class="row" style="margin-top:10px;">
+      <button class="btn ghost" id="clearTableBtn">🗑 ছক মুছুন / Clear table</button>
+    </div>
+  </section>
+
+  <!-- STEP 5: FINAL CALCULATION -->
+  <section class="card">
+    <h2><span class="num">7</span> <span class="bn">চূড়ান্ত হিসাব</span></h2>
+    <p class="hint">P = 1000, Q = 10 রেখে R-এর দুটি পরপর মান (R₁, R₂) বের করুন যাদের মধ্যে বিক্ষেপ দিক পাল্টায়, তারপর নিচে বসান।</p>
+    <div class="row">
+      <div>
+        <label class="field">R₁ (Ω)</label>
+        <input type="number" id="r1Input" step="1">
+      </div>
+      <div>
+        <label class="field">R₂ (Ω)</label>
+        <input type="number" id="r2Input" step="1">
+      </div>
+      <button class="btn primary" id="calcBtn">G গণনা করুন / Calculate G</button>
+    </div>
+    <div class="calc-result" id="calcResult" style="display:none;">
+      <div class="bn" style="font-size:12px;color:var(--muted);">G = (1/100) × (R₁+R₂)/2</div>
+      <div class="g-value" id="gValue">—</div>
+      <div class="g-error" id="gError"></div>
+    </div>
+  </section>
+
+  <footer>
+    উচ্চতর ব্যবহারিক পদার্থবিজ্ঞান · পরীক্ষণ ৫৪ অনুসরণে তৈরি সিমুলেশন
+  </footer>
+</div>
+
+<script>
+(function(){
+  const state = {
+    trueG: null,
+    locked: false,
+    P: 10,
+    Q: 10,
+    plugs: {}, // value -> pulled boolean
+    k1: false,
+    lastDeflection: null, // {dir, mag}
+    readings: []
+  };
+
+  const PLUG_VALUES = [1,2,3,4,10,20,30,40,100,200,300,400,1000,2000,3000];
+  const RATIO_VALUES = [1,10,100,1000];
+
+  // ---- init plug board ----
+  const plugboard = document.getElementById('plugboard');
+  PLUG_VALUES.forEach(v=>{
+    state.plugs[v]=false;
+    const d = document.createElement('div');
+    d.className='plug';
+    d.textContent=v;
+    d.dataset.val=v;
+    d.addEventListener('click', ()=>{
+      state.plugs[v] = !state.plugs[v];
+      d.classList.toggle('pulled', state.plugs[v]);
+      updateRSum();
+    });
+    plugboard.appendChild(d);
+  });
+
+  function updateRSum(){
+    let sum=0;
+    for(const v of PLUG_VALUES){ if(state.plugs[v]) sum+=v; }
+    document.getElementById('rSum').textContent = sum;
+    document.getElementById('rInput').value = sum;
+    return sum;
+  }
+  function currentR(){
+    const v = parseFloat(document.getElementById('rInput').value);
+    return isNaN(v) ? 0 : v;
+  }
+  document.getElementById('rInput').addEventListener('input', ()=>{ /* direct entry overrides plug sum, no extra action needed */ });
+
+  // ---- ratio buttons + direct entry inputs ----
+  function buildRatioButtons(containerId, inputId, key){
+    const el = document.getElementById(containerId);
+    const input = document.getElementById(inputId);
+    RATIO_VALUES.forEach(v=>{
+      const b = document.createElement('button');
+      b.className='btn'+(state[key]===v?' active':'');
+      b.textContent = v;
+      b.addEventListener('click', ()=>{
+        state[key]=v;
+        input.value=v;
+        [...el.children].forEach(c=>c.classList.remove('active'));
+        b.classList.add('active');
+      });
+      el.appendChild(b);
+    });
+    input.addEventListener('input', ()=>{
+      const v = parseFloat(input.value);
+      state[key] = isNaN(v) ? 0 : v;
+      [...el.children].forEach(c=>c.classList.toggle('active', parseFloat(c.textContent)===v));
+    });
+  }
+  buildRatioButtons('pButtons','pInput','P');
+  buildRatioButtons('qButtons','qInput','Q');
+  // mark defaults active
+  document.querySelectorAll('#pButtons .btn')[0].classList.add('active');
+  document.querySelectorAll('#qButtons .btn')[0].classList.add('active');
+
+  // ---- true G controls ----
+  const trueGInput = document.getElementById('trueG');
+  document.getElementById('randomizeBtn').addEventListener('click', ()=>{
+    const val = (Math.random()*40+2).toFixed(1);
+    trueGInput.value = val;
+    state.locked=false;
+    document.getElementById('lockedStatus').style.display='none';
+    trueGInput.disabled=false;
+  });
+  document.getElementById('lockBtn').addEventListener('click', ()=>{
+    const v = parseFloat(trueGInput.value);
+    if(!v || v<=0){ alert('আগে একটি সঠিক G মান দিন / Enter a valid G value first.'); return; }
+    state.trueG = v;
+    state.locked = true;
+    trueGInput.value='';
+    trueGInput.placeholder='••• locked •••';
+    trueGInput.disabled=true;
+    document.getElementById('lockedStatus').style.display='block';
+  });
+
+  // ---- keys ----
+  const k1btn = document.getElementById('k1btn');
+  const k2btn = document.getElementById('k2btn');
+  const k1dot = document.getElementById('k1dot');
+  const k2dot = document.getElementById('k2dot');
+  const needle = document.getElementById(
