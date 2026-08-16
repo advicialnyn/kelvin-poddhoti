@@ -222,6 +222,35 @@
   }
   .deflection-readout .sub{font-size:12px;color:var(--muted);margin-top:2px;}
 
+  .scale-gauge{margin-top:16px;padding:0 4px;}
+  .scale-track{
+    position:relative;
+    height:10px;
+    background:linear-gradient(90deg, var(--verdigris) 0%, var(--wood) 48%, var(--wood) 52%, var(--copper) 100%);
+    opacity:.55;
+    border:1px solid var(--brass-dim);
+    border-radius:5px;
+  }
+  .scale-center-mark{
+    position:absolute;left:50%;top:-5px;width:2px;height:20px;
+    background:var(--brass-light);transform:translateX(-50%);
+  }
+  .scale-pointer{
+    position:absolute;top:-9px;width:3px;height:28px;
+    background:var(--parchment);left:50%;transform:translateX(-50%);
+    border-radius:2px;
+    box-shadow:0 0 10px 2px rgba(224,181,99,.7);
+    transition:left .35s cubic-bezier(.2,.9,.3,1.2);
+  }
+  .scale-ticks{
+    display:flex;justify-content:space-between;margin-top:8px;
+    font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--muted);
+  }
+  .scale-label{
+    text-align:center;font-family:'JetBrains Mono',monospace;font-size:10.5px;
+    color:var(--muted);letter-spacing:.08em;margin-top:10px;text-transform:uppercase;
+  }
+
   table{width:100%;border-collapse:collapse;margin-top:8px;font-size:12.5px;}
   th,td{border:1px solid var(--line);padding:7px 8px;text-align:center;font-family:'JetBrains Mono',monospace;}
   th{background:var(--wood);color:var(--brass-light);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.03em;}
@@ -380,6 +409,16 @@
       <div class="digital" id="digitalReadout">0.00</div>
       <div class="dir">—</div>
       <div class="sub">K₁ চাপুন, তারপর K₂ ট্যাপ করুন</div>
+      <div class="scale-gauge">
+        <div class="scale-track">
+          <div class="scale-center-mark"></div>
+          <div class="scale-pointer" id="scalePointer"></div>
+        </div>
+        <div class="scale-ticks">
+          <span>−300</span><span>−200</span><span>−100</span><span>0</span><span>100</span><span>200</span><span>300</span>
+        </div>
+        <div class="scale-label bn">বিক্ষেপ কাঁটা (গ্যালভানোমিটার স্কেল)</div>
+      </div>
     </div>
   </section>
 
@@ -540,11 +579,18 @@
     }
   });
 
+  function updateScalePointer(val){
+    const clamped = Math.max(-300, Math.min(300, val));
+    const pct = ((clamped + 300) / 600) * 100;
+    document.getElementById('scalePointer').style.left = pct + '%';
+  }
+
   function resetNeedle(){
     needle.style.transform = 'rotate(0deg)';
-    document.getElementById('digitalReadout').textContent = '0.00 div';
+    document.getElementById('digitalReadout').textContent = '0.00 µA';
     readout.querySelector('.dir').textContent='—';
     readout.querySelector('.sub').textContent='K₁ চাপুন, তারপর K₂ ট্যাপ করুন';
+    updateScalePointer(0);
   }
 
   k2btn.addEventListener('click', ()=>{
@@ -569,9 +615,10 @@
     } else {
       dir='left'; dirLabel='বামে · Left'; mag=Math.min(Math.abs(ratio),1);
     }
-    const digitalVal = (dir==='right'?1:dir==='left'?-1:0) * mag * 30;
+    const digitalVal = (dir==='right'?1:dir==='left'?-1:0) * mag * 300;
     const angle = dir==='right'? mag*45 : dir==='left'? -mag*45 : 0;
     needle.style.transform = 'rotate('+angle+'deg)';
+    updateScalePointer(digitalVal);
 
     // rough current estimate through the two parallel branches (A-B-C and A-D-C)
     const branch1 = P+Q, branch2 = R+G;
@@ -579,7 +626,7 @@
     const total = Rh + parallel;
     const iMa = total>0 ? (E/total)*1000 : 0;
 
-    document.getElementById('digitalReadout').textContent = (digitalVal>=0?'+':'') + digitalVal.toFixed(2) + ' div';
+    document.getElementById('digitalReadout').textContent = (digitalVal>=0?'+':'') + digitalVal.toFixed(1) + ' µA';
     readout.querySelector('.dir').textContent = dirLabel;
     readout.querySelector('.sub').textContent = 'P='+P+'Ω  Q='+Q+'Ω  R='+R+'Ω  ·  i ≈ '+iMa.toFixed(1)+' mA';
 
