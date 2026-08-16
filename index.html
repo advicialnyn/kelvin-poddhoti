@@ -526,4 +526,114 @@
   const k2btn = document.getElementById('k2btn');
   const k1dot = document.getElementById('k1dot');
   const k2dot = document.getElementById('k2dot');
-  const needle = document.getElementById(
+  const needle = document.getElementById('needle');
+  const readout = document.getElementById('readout');
+
+  k1btn.addEventListener('click', ()=>{
+    state.k1 = !state.k1;
+    k1btn.classList.toggle('active', state.k1);
+    k1btn.textContent = state.k1 ? '✓ K₁ চাপা আছে / Pressed' : 'চাপুন / Press K₁';
+    k1dot.classList.toggle('on', state.k1);
+    k2btn.disabled = !state.k1;
+    if(!state.k1){
+      resetNeedle();
+    }
+  });
+
+  function resetNeedle(){
+    needle.style.transform = 'rotate(0deg)';
+    document.getElementById('digitalReadout').textContent = '0.00 div';
+    readout.querySelector('.dir').textContent='—';
+    readout.querySelector('.sub').textContent='K₁ চাপুন, তারপর K₂ ট্যাপ করুন';
+  }
+
+  k2btn.addEventListener('click', ()=>{
+    if(!state.k1) return;
+    if(!state.trueG){
+      alert('আগে গ্যালভানোমিটারের একটি G মান সেট ও লক করুন / Set and lock a G value first.');
+      return;
+    }
+    const P = state.P, Q = state.Q, R = currentR(), G = state.trueG;
+    const E = parseFloat(document.getElementById('eInput').value) || 0;
+    const Rh = parseFloat(document.getElementById('rhInput').value) || 0;
+
+    const lhs = P*G, rhs = Q*R; // balance when lhs == rhs
+    let dir, dirLabel, mag;
+    const diff = lhs - rhs;
+    const scale = Math.max(lhs, rhs, 1);
+    const ratio = diff/scale; // roughly -1..1
+    if(Math.abs(diff) < scale*0.002){
+      dir='balanced'; dirLabel='সাম্যাবস্থা (কোনো বিক্ষেপ নেই) · Balanced'; mag=0;
+    } else if(diff>0){
+      dir='right'; dirLabel='ডানে · Right'; mag=Math.min(Math.abs(ratio),1);
+    } else {
+      dir='left'; dirLabel='বামে · Left'; mag=Math.min(Math.abs(ratio),1);
+    }
+    const digitalVal = (dir==='right'?1:dir==='left'?-1:0) * mag * 30;
+    const angle = dir==='right'? mag*45 : dir==='left'? -mag*45 : 0;
+    needle.style.transform = 'rotate('+angle+'deg)';
+
+    // rough current estimate through the two parallel branches (A-B-C and A-D-C)
+    const branch1 = P+Q, branch2 = R+G;
+    const parallel = (branch1+branch2)>0 ? (branch1*branch2)/(branch1+branch2) : 0;
+    const total = Rh + parallel;
+    const iMa = total>0 ? (E/total)*1000 : 0;
+
+    document.getElementById('digitalReadout').textContent = (digitalVal>=0?'+':'') + digitalVal.toFixed(2) + ' div';
+    readout.querySelector('.dir').textContent = dirLabel;
+    readout.querySelector('.sub').textContent = 'P='+P+'Ω  Q='+Q+'Ω  R='+R+'Ω  ·  i ≈ '+iMa.toFixed(1)+' mA';
+
+    // tap animation then settle
+    k2btn.classList.add('active');
+    setTimeout(()=>k2btn.classList.remove('active'), 200);
+
+    // log reading
+    state.readings.push({P,Q,R,dir,dirLabel,digitalVal});
+    renderReadings();
+  });
+
+  function renderReadings(){
+    const body = document.getElementById('readingsBody');
+    if(state.readings.length===0){
+      body.innerHTML = '<tr class="empty-row"><td colspan="6">এখনো কোনো পাঠ নেওয়া হয়নি</td></tr>';
+      return;
+    }
+    body.innerHTML = state.readings.map((r,i)=>{
+      const cls = r.dir==='right'?'dirR':(r.dir==='left'?'dirL':'');
+      const short = r.dir==='right'?'ডানে':(r.dir==='left'?'বামে':'সাম্য');
+      const dv = (r.digitalVal>=0?'+':'')+r.digitalVal.toFixed(2);
+      return '<tr><td>'+(i+1)+'</td><td>'+r.P+'</td><td>'+r.Q+'</td><td>'+r.R+'</td><td class="'+cls+'">'+short+'</td><td class="'+cls+'">'+dv+'</td></tr>';
+    }).join('');
+  }
+
+  document.getElementById('clearTableBtn').addEventListener('click', ()=>{
+    state.readings=[];
+    renderReadings();
+  });
+
+  // ---- final calculation ----
+  document.getElementById('calcBtn').addEventListener('click', ()=>{
+    const r1 = parseFloat(document.getElementById('r1Input').value);
+    const r2 = parseFloat(document.getElementById('r2Input').value);
+    if(isNaN(r1) || isNaN(r2)){
+      alert('R₁ এবং R₂ উভয়ই দিন / Enter both R1 and R2.');
+      return;
+    }
+    const G = (1/100) * ((r1+r2)/2);
+    const box = document.getElementById('calcResult');
+    box.style.display='block';
+    document.getElementById('gValue').textContent = 'G = '+G.toFixed(3)+' Ω';
+    let errLine = '';
+    if(state.trueG){
+      const err = Math.abs(G-state.trueG)/state.trueG*100;
+      errLine = 'প্রকৃত মান / True G = '+state.trueG.toFixed(2)+' Ω &nbsp;·&nbsp; ত্রুটি / Error = '+err.toFixed(2)+'%';
+    } else {
+      errLine = 'তুলনা করতে "আনলক" করা G মান নেই / No locked true value to compare against.';
+    }
+    document.getElementById('gError').innerHTML = errLine;
+  });
+
+})();
+</script>
+</body>
+</html>
