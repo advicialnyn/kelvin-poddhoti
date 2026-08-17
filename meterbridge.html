@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>মিটার ব্রিজ — অজানা রোধ নির্ণয়</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Bengali:wght@400;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0e16; --panel:#111826; --panel-2:#141d2d;
+    --brass:#4fb3c9; --brass-light:#7fd4e6; --brass-dim:#2a4a58;
+    --copper:#ff8a3d; --verdigris:#45c4a0; --parchment:#e4edf2; --muted:#8098a8;
+    --wood:#16202e;
+    --line: rgba(79,179,201,0.28);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 700px at 15% -10%, #241a10 0%, transparent 60%),
+      radial-gradient(1000px 600px at 110% 10%, #1c1510 0%, transparent 55%),
+      var(--bg);
+    color:var(--parchment); font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased; padding-bottom:60px;
+  }
+  .bn{font-family:'Noto Serif Bengali', serif;}
+  .wrap{max-width:920px;margin:0 auto;padding:28px 16px 0;}
+  header{text-align:center;padding:18px 10px 26px;border-bottom:1px solid var(--line);margin-bottom:26px;}
+  .eyebrow{font-family:'JetBrains Mono',monospace;letter-spacing:.18em;font-size:11px;color:var(--brass-light);text-transform:uppercase;opacity:.85;}
+  h1{font-family:'Noto Serif Bengali','Playfair Display',serif;font-weight:700;font-size:clamp(22px,5vw,32px);margin:8px 0 6px;line-height:1.25;}
+  .subtitle{font-family:'Playfair Display',serif;font-style:italic;font-size:14px;color:var(--muted);}
+  section{margin-bottom:26px;}
+  .card{background:linear-gradient(180deg,var(--panel),var(--panel-2));border:1px solid var(--line);border-radius:6px;padding:18px;box-shadow:0 10px 30px -18px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.02);}
+  .card h2{font-family:'Noto Serif Bengali',serif;font-size:16px;margin:0 0 4px;color:var(--brass-light);display:flex;align-items:center;gap:8px;}
+  .card h2 .num{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--wood);background:var(--brass);border-radius:3px;padding:1px 6px;}
+  .hint{font-size:12.5px;color:var(--muted);margin:2px 0 14px;line-height:1.55;}
+  .diagram-box{background:radial-gradient(ellipse at center, #221a12 0%, #170f0a 100%);border:1px solid var(--line);border-radius:6px;padding:10px;margin-bottom:14px;}
+  svg{display:block;width:100%;height:auto;}
+  .wire{stroke:var(--brass); stroke-width:2; fill:none;}
+  .node-label{font-family:'JetBrains Mono',monospace;font-size:13px;fill:var(--brass-light);}
+  .arm-label{font-family:'JetBrains Mono',monospace;font-size:12px;fill:var(--parchment);}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+  .btn{font-family:'JetBrains Mono',monospace;font-size:13px;padding:9px 14px;border-radius:4px;border:1px solid var(--brass-dim);background:var(--wood);color:var(--parchment);cursor:pointer;transition:all .15s;}
+  .btn:hover{border-color:var(--brass);}
+  .btn.active{background:var(--brass);color:#1c1409;border-color:var(--brass-light);font-weight:700;}
+  .btn.primary{background:var(--copper);border-color:#8f3208;color:#fff;font-weight:600;}
+  .btn.ghost{background:transparent;}
+  label.field{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.05em;text-transform:uppercase;}
+  input[type=number]{font-family:'JetBrains Mono',monospace;background:var(--wood);border:1px solid var(--brass-dim);color:var(--parchment);padding:8px 10px;border-radius:4px;width:120px;font-size:14px;}
+  input[type=number]:focus{outline:2px solid var(--brass-light);outline-offset:1px;}
+  input[type=range]{width:100%;accent-color:var(--copper);}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  @media (max-width:560px){ .grid2{grid-template-columns:1fr;} }
+  .plugboard{display:grid;grid-template-columns:repeat(auto-fill, minmax(56px,1fr));gap:8px;margin-top:10px;}
+  .plug{font-family:'JetBrains Mono',monospace;font-size:12px;text-align:center;padding:10px 4px;border-radius:50%;border:2px solid var(--brass-dim);background:radial-gradient(circle at 35% 30%, #3a2c18, #1a130c);color:var(--muted);cursor:pointer;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;transition:all .15s;}
+  .plug.pulled{background:radial-gradient(circle at 35% 30%, var(--brass-light), var(--brass));color:#1c1409;border-color:var(--brass-light);font-weight:700;box-shadow:0 0 12px -2px rgba(224,181,99,.6);}
+  .sum-readout{margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--brass-light);}
+  .sum-readout b{color:var(--parchment);font-size:16px;}
+  .keys{display:flex;gap:14px;flex-wrap:wrap;margin-top:6px;}
+  .key-box{flex:1;min-width:170px;border:1px dashed var(--brass-dim);border-radius:6px;padding:12px;text-align:center;}
+  .key-box .label{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:8px;letter-spacing:.05em;}
+  .status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--brass-dim);margin-right:6px;}
+  .status-dot.on{background:var(--verdigris);box-shadow:0 0 8px var(--verdigris);}
+  .deflection-readout{text-align:center;padding:14px;border-radius:6px;background:var(--wood);border:1px solid var(--line);margin-top:10px;}
+  .deflection-readout .digital{font-family:'JetBrains Mono',monospace;font-size:34px;font-weight:700;color:var(--verdigris);text-shadow:0 0 10px rgba(95,148,132,.5);letter-spacing:.02em;margin-bottom:4px;}
+  .deflection-readout.null .digital{color:var(--brass-light);text-shadow:0 0 14px rgba(224,181,99,.7);}
+  .deflection-readout .dir{font-family:'Noto Serif Bengali',serif;font-size:20px;color:var(--brass-light);font-weight:700;}
+  .deflection-readout .sub{font-size:12px;color:var(--muted);margin-top:2px;}
+  .scale-gauge{margin-top:16px;padding:0 4px;}
+  .scale-track{position:relative;height:10px;background:linear-gradient(90deg, var(--verdigris) 0%, var(--wood) 48%, var(--wood) 52%, var(--copper) 100%);opacity:.55;border:1px solid var(--brass-dim);border-radius:5px;}
+  .scale-center-mark{position:absolute;left:50%;top:-5px;width:2px;height:20px;background:var(--brass-light);transform:translateX(-50%);}
+  .scale-pointer{position:absolute;top:-9px;width:3px;height:28px;background:var(--parchment);left:50%;transform:translateX(-50%);border-radius:2px;box-shadow:0 0 10px 2px rgba(224,181,99,.7);transition:left .12s linear;}
+  .scale-ticks{display:flex;justify-content:space-between;margin-top:8px;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--muted);}
+  .scale-label{text-align:center;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--muted);letter-spacing:.08em;margin-top:10px;text-transform:uppercase;}
+  .jockey-slider-wrap{margin-top:16px;}
+  .jockey-readout{display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--brass-light);margin-bottom:6px;}
+  table{width:100%;border-collapse:collapse;margin-top:8px;font-size:12px;}
+  th,td{border:1px solid var(--line);padding:6px 6px;text-align:center;font-family:'JetBrains Mono',monospace;}
+  th{background:var(--wood);color:var(--brass-light);font-weight:600;font-size:10.5px;text-transform:uppercase;letter-spacing:.02em;}
+  .table-wrap{overflow-x:auto;}
+  .empty-row td{color:var(--muted);font-style:italic;}
+  .calc-result{margin-top:12px;padding:14px;border-radius:6px;background:var(--wood);border:1px solid var(--line);}
+  .calc-result .g-value{font-family:'JetBrains Mono',monospace;font-size:22px;color:var(--brass-light);font-weight:700;}
+  .calc-result .g-error{font-size:12.5px;color:var(--muted);margin-top:4px;}
+  .reveal-line{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--verdigris);margin-top:8px;}
+  footer{text-align:center;font-size:11.5px;color:var(--muted);padding:24px 16px 8px;font-family:'JetBrains Mono',monospace;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">পরীক্ষণ &nbsp;·&nbsp; METRE BRIDGE</div>
+    <h1 class="bn">মিটার ব্রিজের সাহায্যে অজানা তারের রোধ নির্ণয়</h1>
+    <div class="subtitle">To find the resistance of a given wire using a metre bridge</div>
+  </header>
+
+  <!-- STEP 1: SET THE UNKNOWN -->
+  <section class="card">
+    <h2><span class="num">1</span> <span class="bn">অজানা রোধ (X) প্রস্তুত করুন</span></h2>
+    <p class="hint">ডান ফাঁকে থাকা তারের একটি "প্রকৃত" রোধ সেট করুন (বাস্তবে এটি অজানা থাকে) — লক করলে এটি লুকানো থাকবে, তারপর জকি সরিয়ে বের করুন।</p>
+    <div class="row">
+      <div>
+        <label class="field">true X (Ω) — hidden</label>
+        <input type="number" id="trueX" step="0.1" min="0.1" placeholder="e.g. 8.4">
+      </div>
+      <button class="btn" id="randomizeBtn">🎲 এলোমেলো মান / Randomize</button>
+      <button class="btn ghost" id="lockBtn">🔒 লক করুন / Lock &amp; Hide</button>
+    </div>
+    <div id="lockedStatus" class="reveal-line" style="display:none;margin-top:12px;">✓ X লক করা হয়েছে ও লুকানো আছে। এখন জকি সরিয়ে নিষ্পন্দ বিন্দু খুঁজুন।</div>
+  </section>
+
+  <!-- CIRCUIT DIAGRAM -->
+  <section class="card">
+    <h2><span class="num">2</span> <span class="bn">মিটার ব্রিজ বর্তনী</span></h2>
+    <p class="hint">A থেকে C পর্যন্ত ১ মিটার দীর্ঘ সুষম তার। R (রোধ বাক্স) বাম ফাঁকে, X (অজানা) ডান ফাঁকে। B বিন্দু থেকে গ্যালভানোমিটার সরাসরি জকি J-এর সাথে যুক্ত।</p>
+    <div class="diagram-box">
+      <svg viewBox="0 0 520 260">
+        <!-- top rail A - B - C -->
+        <line class="wire" x1="60" y1="70" x2="260" y2="70" />
+        <line class="wire" x1="260" y1="70" x2="460" y2="70" />
+        <text class="node-label" x="60" y="55" text-anchor="middle">A</text>
+        <text class="node-label" x="260" y="55" text-anchor="middle">B</text>
+        <text class="node-label" x="460" y="55" text-anchor="middle">C</text>
+        <text class="arm-label" x="140" y="60" text-anchor="middle">R</text>
+        <text class="arm-label" x="380" y="60" text-anchor="middle">X (অজানা)</text>
+        <!-- resistor zigzags -->
+        <path class="wire" d="M100,70 l10,-10 l10,20 l10,-20 l10,20 l10,-20 l10,10" fill="none"/>
+        <path class="wire" d="M300,70 l10,-10 l10,20 l10,-20 l10,20 l10,-20 l10,10" fill="none"/>
+        <!-- vertical from B down to galvanometer -->
+        <line class="wire" x1="260" y1="70" x2="260" y2="120" />
+        <circle cx="260" cy="140" r="20" fill="#1a130c" stroke="var(--brass)" stroke-width="2"/>
+        <text x="260" y="145" text-anchor="middle" class="arm-label" font-weight="700">G</text>
+        <g class="needle" id="needle" style="transform-origin:260px 140px;">
+          <line x1="260" y1="140" x2="260" y2="126" stroke="var(--copper)" stroke-width="3" stroke-linecap="round"/>
+        </g>
+        <!-- line from galvanometer down to jockey (dynamic x2) -->
+        <line class="wire" id="jockeyWire" x1="260" y1="160" x2="260" y2="200" stroke-dasharray="3 3"/>
+        <!-- jockey marker -->
+        <polygon id="jockeyMarker" points="255,200 265,200 260,212" fill="var(--copper)"/>
+        <!-- main bridge wire track A to C -->
+        <line class="wire" x1="60" y1="200" x2="460" y2="200" stroke-width="3"/>
+        <text class="node-label" x="60" y="222" text-anchor="middle" font-size="11">0cm</text>
+        <text class="node-label" x="260" y="222" text-anchor="middle" font-size="11">50cm</text>
+        <text class="node-label" x="460" y="222" text-anchor="middle" font-size="11">100cm</text>
+        <!-- battery loop -->
+        <line class="wire" x1="60" y1="200" x2="30" y2="200" />
+        <line class="wire" x1="460" y1="200" x2="490" y2="200" />
+        <path class="wire" d="M30,200 L30,240 L490,240 L490,200" />
+        <text class="arm-label" x="260" y="256" text-anchor="middle" fill="var(--muted)" font-size="10">E · K</text>
+      </svg>
+    </div>
+  </section>
+
+  <!-- STEP 2: R BOX -->
+  <section class="card">
+    <h2><span class="num">3</span> <span class="bn">বাম ফাঁকের রোধ (R) — রোধ বাক্স</span></h2>
+    <p class="hint">প্লাগ তুলুন অথবা সরাসরি বক্সে মান টাইপ করুন।</p>
+    <div class="plugboard" id="plugboard"></div>
+    <div class="row" style="margin-top:12px;align-items:flex-end;">
+      <div>
+        <label class="field">R — সরাসরি মান / direct entry (Ω)</label>
+        <input type="number" id="rInput" step="1" min="0.1" value="10">
+      </div>
+      <button class="btn" id="rInfBtn">R = ∞ (খোলা / Open circuit)</button>
+      <div class="sum-readout" style="margin-top:0;">প্লাগ যোগফল / plug sum = <b id="rSum">0</b> Ω</div>
+    </div>
+    <div class="hint" id="rInfHint" style="display:none;margin-top:8px;margin-bottom:0;">A–D বাহু সম্পূর্ণ খোলা (R=∞) — কোনো প্রবাহ এই বাহুতে যেতে পারবে না, তাই ব্যাটারি শুধু জকির অবস্থানের উপর নির্ভর করে খুবই সামান্য বা প্রায় স্থির বিক্ষেপ দেখাবে।</div>
+  </section>
+
+  <!-- STEP 3: WIRE + GALVANOMETER + BATTERY PARAMS -->
+  <section class="card">
+    <h2><span class="num">4</span> <span class="bn">তার, গ্যালভানোমিটার ও ব্যাটারি</span></h2>
+    <p class="hint">ব্রিজ তারের মোট রোধ (১০০ সেমি জুড়ে), গ্যালভানোমিটারের রোধ, এবং ব্যাটারির ভোল্টেজ — এগুলো প্রকৃত প্রবাহ হিসাবের জন্য প্রয়োজন।</p>
+    <div class="row">
+      <div>
+        <label class="field">তার — মোট রোধ (Ω / 100cm)</label>
+        <input type="number" id="wireRInput" step="0.1" min="0.1" value="3">
+      </div>
+      <div>
+        <label class="field">গ্যালভানোমিটার রোধ (Ω)</label>
+        <input type="number" id="galvRInput" step="1" min="1" value="50">
+      </div>
+      <div>
+        <label class="field">E — ব্যাটারি (V)</label>
+        <input type="number" id="eInput" step="0.1" min="0.1" value="2">
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 4: KEY + JOCKEY -->
+  <section class="card">
+    <h2><span class="num">5</span> <span class="bn">চাবি ও জকি</span></h2>
+    <p class="hint">নিয়ম: প্রথমে K (ব্যাটারি চাবি) চাপুন, তারপর জকি স্লাইডার সরিয়ে তারের উপর ছোঁয়ান। যেখানে গ্যালভানোমিটারের বিক্ষেপ শূন্য (বা প্রায় শূন্য) হয়, সেটাই নিষ্পন্দ বিন্দু।</p>
+    <div class="keys">
+      <div class="key-box">
+        <div class="label"><span class="status-dot" id="k1dot"></span>K · BATTERY KEY</div>
+        <button class="btn" id="k1btn">চাপুন / Press K</button>
+      </div>
+    </div>
+
+    <div class="jockey-slider-wrap">
+      <div class="jockey-readout"><span>A (0cm)</span><span id="jockeyReadout">l = 50.0 cm</span><span>C (100cm)</span></div>
+      <input type="range" id="jockeySlider" min="0.5" max="99.5" step="0.1" value="50">
+    </div>
+
+    <p class="hint" style="margin-top:12px;">সংযোগ পরীক্ষা (connection check): জকি প্রথমে বাম প্রান্তে, তারপর ডান প্রান্তে ছোঁয়ান — বিক্ষেপ বিপরীত দিকে হলে সংযোগ ঠিক আছে। একই দিকে হলে বর্তনীতে ভুল আছে।</p>
+    <div class="row">
+      <button class="btn ghost" id="leftEndBtn">⇤ বাম প্রান্ত / Left end (l≈1)</button>
+      <button class="btn ghost" id="rightEndBtn">ডান প্রান্ত / Right end (l≈99) ⇥</button>
+      <button class="btn primary" id="autoNullBtn">🎯 নিষ্পন্দ বিন্দু খুঁজুন / Auto-find null point</button>
+    </div>
+
+    <div class="deflection-readout" id="readout">
+      <div class="digital" id="digitalReadout">0.00 µA</div>
+      <div class="dir">—</div>
+      <div class="sub">K চাপুন, তারপর জকি সরান</div>
+      <div class="scale-gauge">
+        <div class="scale-track">
+          <div class="scale-center-mark"></div>
+          <div class="scale-pointer" id="scalePointer"></div>
+        </div>
+        <div class="scale-ticks">
+          <span>−300</span><span>−200</span><span>−100</span><span>0</span><span>100</span><span>200</span><span>300</span>
+        </div>
+        <div class="scale-label bn">বিক্ষেপ কাঁটা (গ্যালভানোমিটার স্কেল)</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- READINGS TABLE -->
+  <section class="card">
+    <h2><span class="num">6</span> <span class="bn">পর্যবেক্ষণ ছক</span></h2>
+    <p class="hint">নিষ্পন্দ বিন্দুতে পৌঁছালে "রিডিং রেকর্ড করুন" চাপুন। R-এর মান বদলে অন্তত ৩–৪টি পাঠ নিন।</p>
+    <div class="table-wrap">
+    <table id="readingsTable">
+      <thead>
+        <tr><th>#</th><th>R (Ω)</th><th>l (cm)</th><th>(100−l) (cm)</th><th>X=R(100−l)/l (Ω)</th></tr>
+      </thead>
+      <tbody id="readingsBody">
+        <tr class="empty-row"><td colspan="5">এখনো কোনো পাঠ নেওয়া হয়নি</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <div class="row" style="margin-top:10px;">
+      <button class="btn primary" id="recordBtn">📍 রিডিং রেকর্ড করুন / Record reading</button>
+      <button class="btn ghost" id="clearTableBtn">🗑 ছক মুছুন / Clear table</button>
+    </div>
+  </section>
+
+  <!-- FINAL RESULT -->
+  <section class="card">
+    <h2><span class="num">7</span> <span class="bn">ফলাফল</span></h2>
+    <p class="hint">রেকর্ড করা সবগুলো X-এর গড়ই হলো তারের প্রকৃত রোধ।</p>
+    <div class="calc-result" id="calcResult">
+      <div class="bn" style="font-size:12px;color:var(--muted);">গড় X (average of recorded rows)</div>
+      <div class="g-value" id="gValue">— Ω</div>
+      <div class="g-error" id="gError"></div>
+    </div>
+  </section>
+
+  <footer>উচ্চতর ব্যবহারিক পদার্থবিজ্ঞান · মিটার ব্রিজ সিমুলেশন</footer>
+</div>
+
+<script>
+(function(){
+  const state = {
+    trueX: null, locked: false,
+    plugs: {}, k1: false, rInfinite: false
+  };
+  const PLUG_VALUES = [1,2,3,4,10,20,30,40,100,200,300,400,1000,2000,3000];
+
+  // ---- plug board ----
+  const plugboard = document.getElementById('plugboard');
+  PLUG_VALUES.forEach(v=>{
+    state.plugs[v]=false;
+    const d = document.createElement('div');
+    d.className='plug'; d.textContent=v; d.dataset.val=v;
+    d.addEventListener('click', ()=>{
+      state.plugs[v] = !state.plugs[v];
+      d.classList.toggle('pulled', state.plugs[v]);
+      updateRSum();
+      refreshReading();
+    });
+    plugboard.appendChild(d);
+  });
+  function updateRSum(){
+    let sum=0;
+    for(const v of PLUG_VALUES){ if(state.plugs[v]) sum+=v; }
+    document.getElementById('rSum').textContent = sum;
+    if(sum>0) document.getElementById('rInput').value = sum;
+    return sum;
+  }
+  function currentR(){
+    if(state.rInfinite) return Infinity;
+    const v = parseFloat(document.getElementById('rInput').value);
+    return (isNaN(v)||v<=0) ? 0.1 : v;
+  }
+  document.getElementById('rInput').addEventListener('input', refreshReading);
+
+  const rInfBtn = document.getElementById('rInfBtn');
+  const rInfHint = document.getElementById('rInfHint');
+  rInfBtn.addEventListener('click', ()=>{
+    state.rInfinite = !state.rInfinite;
+    rInfBtn.classList.toggle('active', state.rInfinite);
+    rInfHint.style.display = state.rInfinite ? 'block' : 'none';
+    document.getElementById('rInput').disabled = state.rInfinite;
+    plugboard.style.opacity = state.rInfinite ? '.4' : '1';
+    plugboard.style.pointerEvents = state.rInfinite ? 'none' : 'auto';
+    refreshReading();
+  });
+
+  // ---- true X controls ----
+  const trueXInput = document.getElementById('trueX');
+  document.getElementById('randomizeBtn').addEventListener('click', ()=>{
+    trueXInput.value = (Math.random()*40+2).toFixed(1);
+    state.locked=false;
+    document.getElementById('lockedStatus').style.display='none';
+    trueXInput.disabled=false;
+  });
+  document.getElementById('lockBtn').addEventListener('click', ()=>{
+    const v = parseFloat(trueXInput.value);
+    if(!v || v<=0){ alert('আগে একটি সঠিক X মান দিন / Enter a valid X value first.'); return; }
+    state.trueX = v; state.locked = true;
+    trueXInput.value=''; trueXInput.placeholder='••• locked •••'; trueXInput.disabled=true;
+    document.getElementById('lockedStatus').style.display='block';
+    refreshReading();
+  });
+
+  // ---- other inputs live-refresh ----
+  ['wireRInput','galvRInput','eInput'].forEach(id=>{
+    document.getElementById(id).addEventListener('input', refreshReading);
+  });
+
+  // ---- key K ----
+  const k1btn = document.getElementById('k1btn');
+  const k1dot = document.getElementById('k1dot');
+  const needle = document.getElementById('needle');
+  const readout = document.getElementById('readout');
+  const jockeySlider = document.getElementById('jockeySlider');
+  const jockeyReadout = document.getElementById('jockeyReadout');
+  const jockeyMarker = document.getElementById('jockeyMarker');
+  const jockeyWire = document.getElementById('jockeyWire');
+
+  k1btn.addEventListener('click', ()=>{
+    state.k1 = !state.k1;
+    k1btn.classList.toggle('active', state.k1);
+    k1btn.textContent = state.k1 ? '✓ K চাপা আছে / Pressed' : 'চাপুন / Press K';
+    k1dot.classList.toggle('on', state.k1);
+    refreshReading();
+  });
+
+  function updateScalePointer(val){
+    const clamped = Math.max(-300, Math.min(300, val));
+    const pct = ((clamped + 300) / 600) * 100;
+    document.getElementById('scalePointer').style.left = pct + '%';
+  }
+
+  function gcond(x){ return x > 1e-9 ? 1/x : 1e9; }
+
+  // solve the 2-node bridge: A fixed at E, C grounded at 0 (K closed = direct wire)
+  function solveMeterBridge(E,R,X,wireR,galvR,l){
+    const sigma = wireR/100;
+    const lc = Math.max(0.1, Math.min(99.9, l));
+    const gAJ = gcond(lc*sigma);
+    const gJC = gcond((100-lc)*sigma);
+    const gR = gcond(R), gX = gcond(X), gG = gcond(galvR);
+    const A = E;
+    const K1 = gR+gX+gG;
+    const denom = (gAJ+gJC+gG)*K1 - gG*gG;
+    const J = A*(gAJ*K1 + gG*gR) / denom;
+    const T = (gR*A + gG*J) / K1;
+    const I_G = gG*(T-J);
+    return I_G; // amps, current flowing T->J through galvanometer
+  }
+
+  function refreshReading(){
+    const l = parseFloat(jockeySlider.value);
+    jockeyReadout.textContent = 'l = ' + l.toFixed(1) + ' cm';
+    const pct = l/100*100;
+    jockeyMarker.setAttribute('points', (260-400/2+400*l/100-5)+',200 '+(260-400/2+400*l/100+5)+',200 '+(260-400/2+400*l/100)+',212');
+    jockeyWire.setAttribute('x2', 260-400/2+400*l/100);
+
+    if(!state.k1 || !state.trueX){
+      needle.style.transform='rotate(0deg)';
+      updateScalePointer(0);
+      document.getElementById('digitalReadout').textContent = '0.00 µA';
+      readout.classList.remove('null');
+      readout.querySelector('.dir').textContent = '—';
+      readout.querySelector('.sub').textContent = state.k1 ? 'X লক করুন প্রথমে' : 'K চাপুন, তারপর জকি সরান';
+      return;
+    }
+
+    const R = currentR();
+    const X = state.trueX;
+    const wireR = parseFloat(document.getElementById('wireRInput').value)||3;
+    const galvR = parseFloat(document.getElementById('galvRInput').value)||50;
+    const E = parseFloat(document.getElementById('eInput').value)||2;
+
+    const I_G = solveMeterBridge(E,R,X,wireR,galvR,l);
+    const iUA = I_G*1e6;
+    const mag = Math.min(Math.abs(iUA)/300,1);
+    const angle = iUA>=0 ? mag*45 : -mag*45;
+    needle.style.transform = 'rotate('+angle+'deg)';
+    updateScalePointer(iUA);
+    document.getElementById('digitalReadout').textContent = (iUA>=0?'+':'') + iUA.toFixed(2) + ' µA';
+
+    const isNull = Math.abs(iUA) < 0.3;
+    readout.classList.toggle('null', isNull);
+    readout.querySelector('.dir').textContent = isNull ? 'নিষ্পন্দ বিন্দু! · Null point!' : (iUA>0? 'ডানে · Right' : 'বামে · Left');
+    const rDisplay = (R===Infinity) ? '∞' : R.toFixed(1);
+    let subText = 'R='+rDisplay+'Ω  l='+l.toFixed(1)+'cm  (100−l)='+(100-l).toFixed(1)+'cm';
+    if(l<45 || l>55) subText += '  ⚠ নিষ্পন্দ বিন্দু 45–55cm-এর বাইরে হলে R বদলান';
+    readout.querySelector('.sub').textContent = subText;
+  }
+
+  const leftEndBtn = document.getElementById('leftEndBtn');
+  const rightEndBtn = document.getElementById('rightEndBtn');
+  leftEndBtn.addEventListener('click', ()=>{
+    jockeySlider.value = 1;
+    refreshReading();
+  });
+  rightEndBtn.addEventListener('click', ()=>{
+    jockeySlider.value = 99;
+    refreshReading();
+  });
+
+  const autoNullBtn = document.getElementById('autoNullBtn');
+  autoNullBtn.addEventListener('click', ()=>{
+    if(!state.k1){ alert('আগে K চাপুন / Press K first.'); return; }
+    if(!state.trueX){ alert('আগে X লক করুন / Lock X first.'); return; }
+    const R = currentR();
+    if(R===Infinity){ alert('R=∞ অবস্থায় নিষ্পন্দ বিন্দু পাওয়া যাবে না (A–D বাহু খোলা)।'); return; }
+    let lNull = 100*R/(R+state.trueX);
+    lNull = Math.max(0.5, Math.min(99.5, lNull));
+    jockeySlider.value = lNull.toFixed(2);
+    refreshReading();
+  });
+
+  jockeySlider.addEventListener('input', refreshReading);
+
+  // ---- readings table ----
+  const readings = [];
+  document.getElementById('recordBtn').addEventListener('click', ()=>{
+    if(!state.k1){ alert('আগে K চাপুন / Press K first.'); return; }
+    const R = currentR();
+    const l = parseFloat(jockeySlider.value);
+    if(l<45 || l>55){
+      const proceed = confirm('নিষ্পন্দ বিন্দু 45–55cm সীমার বাইরে (l='+l.toFixed(1)+'cm)। বইয়ের সতর্কতা অনুযায়ী R বদলে এটি মাঝামাঝি আনা ভালো। তবুও রেকর্ড করবেন?');
+      if(!proceed) return;
+    }
+    const X_calc = (R===Infinity) ? Infinity : R*(100-l)/l;
+    readings.push({R,l,X_calc});
+    renderReadings();
+  });
+  function renderReadings(){
+    const body = document.getElementById('readingsBody');
+    if(readings.length===0){
+      body.innerHTML = '<tr class="empty-row"><td colspan="5">এখনো কোনো পাঠ নেওয়া হয়নি</td></tr>';
+    } else {
+      body.innerHTML = readings.map((r,i)=>{
+        const rTxt = (r.R===Infinity)?'∞':r.R.toFixed(1);
+        const xTxt = (r.X_calc===Infinity)?'∞':r.X_calc.toFixed(3);
+        return '<tr><td>'+(i+1)+'</td><td>'+rTxt+'</td><td>'+r.l.toFixed(1)+'</td><td>'+(100-r.l).toFixed(1)+'</td><td>'+xTxt+'</td></tr>';
+      }).join('');
+    }
+    // update average result
+    const box = document.getElementById('calcResult');
+    if(readings.length===0){
+      document.getElementById('gValue').textContent = '— Ω';
+      document.getElementById('gError').textContent = '';
+      return;
+    }
+    const finiteReadings = readings.filter(r=>isFinite(r.X_calc));
+    if(finiteReadings.length===0){
+      document.getElementById('gValue').textContent = '— (সব রিডিং R=∞)';
+      document.getElementById('gError').textContent = '';
+      return;
+    }
+    const avg = finiteReadings.reduce((s,r)=>s+r.X_calc,0)/finiteReadings.length;
+    document.getElementById('gValue').textContent = 'X ≈ '+avg.toFixed(3)+' Ω';
+    if(state.trueX){
+      const err = Math.abs(avg-state.trueX)/state.trueX*100;
+      document.getElementById('gError').innerHTML = 'প্রকৃত মান / True X = '+state.trueX.toFixed(2)+' Ω &nbsp;·&nbsp; ত্রুটি / Error = '+err.toFixed(2)+'%';
+    } else {
+      document.getElementById('gError').textContent = 'তুলনা করতে X লক করা নেই।';
+    }
+  }
+  document.getElementById('clearTableBtn').addEventListener('click', ()=>{
+    readings.length=0; renderReadings();
+  });
+
+  refreshReading();
+})();
+</script>
+</body>
+</html>
